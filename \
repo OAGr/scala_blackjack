@@ -10,13 +10,11 @@ class Hand{
   }
 
   def total: Int = {
-    if !cards.empty?{
-      var total = cards.map{c => c.points}.reduceLeft[Int](_+_)
-    else{
-      var total = 0
-    }
+    //handle case with 0 cards
+    var total = cards.map{c => c.points}.reduceLeft[Int](_+_)
       // Also make sure it's not the dealer with under 17 points
-    if (cards.map{c => c.points}.contains(1) && total < 12){
+
+      if (cards.map{c => c.points}.contains(1) && total < 12){
       total + 10
     }
     else{
@@ -99,21 +97,6 @@ class Player{
   def show_hand{
     println("\n\n ---- Your Cards ---- ")
     hand.show
-  }
-
-  def select_bid:Int = {
-    println("How much would you like to spend? Please bid a discrete postive amount")
-    var bid:Int = 0
-    while (bid == 0){
-      var bid_input:Int = Console.readInt()
-      bid_input match{
-        case lessthan1 if (lessthan1 < 1) => println("You need to bid a value above 0")
-        case overamount if (overamount > gold ) => println("You don't have that much money.")
-        case works if (works > 0 && works <= gold) => {bid = bid_input}
-        case _ => println("Didn't understand input.  Try again")
-      }
-    }
-    bid
   }
 
 }
@@ -217,15 +200,24 @@ class Game{
 
   def setup_round{
     println("You have " + player.gold + " gold")
+    println("How much would you like to spend? (At least 1)")
     // validate that bid is at most equal to gold amount and is greater
     // than 1
-    var bid:Int = player.select_bid
+    var bid:Int = Console.read()
     println("You have bid " + bid + " gold.  Starting Game!")
+    bid match{
+      case within10 if (within10 <= 10) => println("It worked")
+      case within100 if (within100 <= 100) => println("It seriously worked")
+      case _ => throw new IllegalArgumentException("Only values between 0 and 100 allowed")
+    }
     round = new Round(player,house,bid)
     turn
   }
 
-
+  def select_bid{
+    println("How much would you like to spend?")
+    var bid = Console.readInt()
+  }
 
   def turn{
     println(" \n New Turn \n")
