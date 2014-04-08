@@ -3,30 +3,25 @@ val rnd = new scala.util.Random
 
 class Hand{
   val cards = new ArrayBuffer[Card]()
-    init()
+  init
 
   def draw() = {
     cards += new Card
   }
 
-  def total: Int = {
-    if !cards.empty?{
-      var total = cards.map{c => c.points}.reduceLeft[Int](_+_)
-    else{
-      var total = 0
-    }
-      // Also make sure it's not the dealer with under 17 points
-    if (cards.map{c => c.points}.contains(1) && total < 12){
-      total + 10
-    }
-    else{
-      total
-    }
+  def points: Int = cards match{
+    case none if none.isEmpty => 0
+    case with_ace if (with_ace.map{c => c.points}.contains(1) && count < 12) => count + 10
+    case cards => count
+  }
+
+  def count:Int = {
+    cards.map{c => c.points}.reduceLeft[Int](_+_)
   }
 
   def show = {
     cards.foreach(c => println(c))
-    println("total points: " + total) 
+    println("total points: " + points) 
   }
 
   def show_from_house {
@@ -135,7 +130,7 @@ class House{
   }
 
   def turn = {
-    if (hand.total < 17){
+    if (hand.count < 17){
       hand.draw()
     }
     println("The House's new hand is")
@@ -180,8 +175,8 @@ class Round( player: Player, house: House, bid: Int){
 
   class Result( player: Player, house: House){
     var multiply: Int = _
-    val house_points = house.hand.total
-    val player_points = player.hand.total
+    val house_points = house.hand.points
+    val player_points = player.hand.points
 
     if (player_points > 21){
       lose()
@@ -216,6 +211,7 @@ class Game{
   var round: Round = _
 
   def setup_round{
+    if (player.gold > 0){
     println("You have " + player.gold + " gold")
     // validate that bid is at most equal to gold amount and is greater
     // than 1
@@ -223,9 +219,11 @@ class Game{
     println("You have bid " + bid + " gold.  Starting Game!")
     round = new Round(player,house,bid)
     turn
+    }   
+    else {
+      end_game
+    }
   }
-
-
 
   def turn{
     println(" \n New Turn \n")
@@ -236,14 +234,14 @@ class Game{
   }
 
   def choose{
-    if (defeat == true){
+    if (defeat){
       early_loss
     }
     var choice = Console.readInt()
       choice match {
       case 1 => player_hold
       case 2 => player_draw
-      case _ => redo
+      case _ => { println("didn't understand input.  Try again"); choose }
     }
   }
 
@@ -260,13 +258,8 @@ class Game{
     turn
   }
 
-  def redo{
-    println("didn't understand input.  Try again")
-    choose
-  }
-
   def defeat = {
-    player.hand.total > 21
+    player.hand.points > 21
   }
 
   def early_loss{ 
@@ -274,6 +267,18 @@ class Game{
     round.end
     setup_round
   }
+
+  def end_game{
+    println("You have used up all of your gold.  You have lost the game")
+    Thread.sleep(2000)
+    println("\n\nPlease don't take it personally though.  ")
+    Thread.sleep(1200)
+    print("\nTo be honest, you really shouldn't be playing blackjack anyway. ")
+    Thread.sleep(1500)
+    println("\nIf you're looking for some income, I suggest learning data science or data engineering.")
+    Thread.sleep(2200)
+    println("\n\nThat is all.  I'm getting back to work now.  Good day sir. \n\n\n")
+    }
 
 }
 
