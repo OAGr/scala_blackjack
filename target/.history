@@ -1,0 +1,4 @@
+Game
+var a = 3
+var b = new Game
+exit

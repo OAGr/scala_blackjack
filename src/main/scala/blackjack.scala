@@ -93,6 +93,7 @@ class Player{
   var gold:Int = 100
 
   def reset = {hand = new Hand}
+
   def show_hand{
     println("\n\n ---- Your Cards ---- ")
     hand.show
@@ -196,7 +197,6 @@ class Game{
   val player = new Player
   val house = new House
   var round: Round = _
-  setup_round
 
   def setup_round{
     println("You have " + player.gold + " gold")
@@ -232,6 +232,7 @@ class Game{
     house.turn
     round.end
     setup_round
+    // TODO: allow dealer to go more times after player holds
   }
 
   def player_draw{
@@ -254,4 +255,8 @@ class Game{
     round.end
     setup_round
   }
+
 }
+
+var game = new Game
+game.setup_round
