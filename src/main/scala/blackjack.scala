@@ -3,7 +3,7 @@ val rnd = new scala.util.Random
 
 class Hand{
   val cards = new ArrayBuffer[Card]()
-  init
+    init
 
   def draw() = {
     cards += new Card
@@ -24,7 +24,7 @@ class Hand{
     println("total points: " + points) 
   }
 
-  def show_from_house {
+  def show_from_dealer {
     for (i <- 1 until cards.length){
       println(cards(i))
     }
@@ -87,23 +87,27 @@ class Hand{
 
 class Player{
   var hand:Hand = _
+  var standing:Boolean = false
   var gold:Int = 100
 
-  def reset = {hand = new Hand}
+  def reset = {
+    standing = false
+    hand = new Hand
+  }
 
   def show_hand{
-    println("\n\n ---- Your Cards ---- ")
+    println("\n-- Your Cards -- ")
     hand.show
   }
 
   def select_bid:Int = {
-    println("How much would you like to spend? Please bid a discrete postive amount")
+    println("How much would you like to bet?")
     var bid:Int = 0
     while (bid == 0){
       var bid_input:Int = Console.readInt()
-      bid_input match{
-        case lessthan1 if (lessthan1 < 1) => println("You need to bid a value above 0")
-        case overamount if (overamount > gold ) => println("You don't have that much money.")
+        bid_input match{
+        case lessthan1 if (lessthan1 < 1) => println("You need to bid a value above 0.  Enter number again.")
+        case overamount if (overamount > gold ) => println("You don't have that much money. Enter number again")
         case works if (works > 0 && works <= gold) => {bid = bid_input}
         case _ => println("Didn't understand input.  Try again")
       }
@@ -111,39 +115,131 @@ class Player{
     bid
   }
 
+  def turn{
+    show_hand
+
+    println("\n\n 1: stand 2: draw ")
+    var choice = Console.readInt()
+      choice match {
+      case 1 => stand
+      case 2 => draw
+      case _ => { println("didn't understand input.  Try again"); turn }
+    }
+  }
+
+  def stand{
+    standing = true
+    println("\n ---<<<<< You STAND >>>>>---  \n")
+    pause()
+  }
+
+  def draw{
+    hand.draw()
+    println("\n ---<<<<< You DRAW >>>>>---  \n")
+    pause()
+    show_hand
+    if (defeat){
+      early_loss
+    }
+    pause()
+  }
+
+  def defeat = {
+    hand.points > 21
+  }
+
+  def early_loss{ 
+    standing = true
+    println("You went over!")
+  }
 }
 
-class House{
+class Dealer{
   var hand:Hand = _
+  var standing:Boolean = false
 
-  def reset = {hand = new Hand}
+  def reset = {
+    standing = false
+    hand = new Hand
+  }
 
   def show_hand = {
-    println("\n\n ---- House's Cards ---- ")
-    println(" (Card Facedown) ")
-    hand.show_from_house
+    println("\n-- Dealer's Cards -- ")
+    println("(Card Facedown) ")
+    hand.show_from_dealer
   }
 
   def show_full_hand = {
-    println("\n\n ---- House's Full Cards ---- ")
+    println("\n-- Dealer's Cards -- ")
     hand.show
   }
 
   def turn = {
-    if (hand.count < 17){
-      hand.draw()
+    if (hand.points < 17){ 
+      draw
     }
-    println("The House's new hand is")
+    else{
+      stand
+    }
+  }
+
+  def stand{
+    println("\n ----- The Dealer STANDS ----- \n")
+    pause()
+    standing = true
+  }
+
+  def draw{
+    println("\n ----- The Dealer DRAWS ----- \n")
+    hand.draw()
+    pause(2)
+    println("The Dealers's new hand is")
+    pause()
     show_hand
   }
 }
 
 
 
-class Round( player: Player, house: House, bid: Int){
-  player.reset
-  house.reset
+class Round( player: Player, dealer: Dealer){
   var result: Int = _
+  var bid: Int = _
+  player.reset
+  dealer.reset
+
+  def play{
+    setup
+    while(!dealer.standing || !player.standing){
+      turn
+    }
+    end
+  }
+
+  def setup{
+    println("\n\n\n<=============== NEW ROUND ===============> \n ")
+    println("You have " + player.gold + " gold")
+    bid = player.select_bid
+    println("You have bid " + bid + " gold.  Starting Game!")
+    println("\n ---<<<<< Initial Draw >>>>>---  \n")
+    pause()
+    dealer.show_hand
+    player.show_hand
+    pause()
+  }
+
+  def turn{
+    pause()
+    if (!player.standing) { 
+      println("\n========== Your Turn ==========")
+      player.turn 
+      pause()
+    }
+    if (!dealer.standing) { 
+      println("\n========== Dealer's Turn ========== \n")
+      pause()
+      dealer.turn 
+    }
+  }
 
   def end{
     find_outcome()
@@ -152,7 +248,7 @@ class Round( player: Player, house: House, bid: Int){
   }
 
   def find_outcome() = {
-    result = new Result(player, house).multiply
+    result = new Result(player, dealer).multiply
   }
 
   def outcome_message():String = result match {
@@ -166,16 +262,19 @@ class Round( player: Player, house: House, bid: Int){
   }
 
   def print_outcome{
-    println(" \n\n\n ---------------- END OF ROUND ---------------- \n ")
-    house.show_full_hand
+    pause(2)
+    println(" \n\n\n <=============== END OF ROUND ===============> \n ")
+    pause(2)
+    dealer.show_full_hand
     player.show_hand
     println(" \n ")
     println(outcome_message)
+    pause(6)
   }
 
-  class Result( player: Player, house: House){
+  class Result( player: Player, dealer: Dealer){
     var multiply: Int = _
-    val house_points = house.hand.points
+    val dealer_points = dealer.hand.points
     val player_points = player.hand.points
 
     if (player_points > 21){
@@ -184,7 +283,7 @@ class Round( player: Player, house: House, bid: Int){
     else if (player_points == 21){
       blackjack()
     }
-    else if (house_points > 21 || house_points < player_points){
+    else if (dealer_points > 21 || dealer_points < player_points){
       win()
     }
     else{
@@ -207,80 +306,39 @@ class Round( player: Player, house: House, bid: Int){
 
 class Game{
   val player = new Player
-  val house = new House
+  val dealer = new Dealer
   var round: Round = _
 
-  def setup_round{
-    if (player.gold > 0){
-    println("You have " + player.gold + " gold")
-    // validate that bid is at most equal to gold amount and is greater
-    // than 1
-    var bid:Int = player.select_bid
-    println("You have bid " + bid + " gold.  Starting Game!")
-    round = new Round(player,house,bid)
-    turn
+  def setup{
+    println("Welcome to Hacker Blackjack! \n\n")
+    println("You play it like Blackjack")
+    main
+  }
+
+  def main{
+    while (player.gold > 0){
+      round = new Round(player,dealer)
+      round.play
     }   
-    else {
-      end_game
-    }
-  }
-
-  def turn{
-    println(" \n New Turn \n")
-    house.show_hand
-    player.show_hand
-    println("\n\n 1: hold 2: draw ")
-    choose
-  }
-
-  def choose{
-    if (defeat){
-      early_loss
-    }
-    var choice = Console.readInt()
-      choice match {
-      case 1 => player_hold
-      case 2 => player_draw
-      case _ => { println("didn't understand input.  Try again"); choose }
-    }
-  }
-
-  def player_hold{
-    house.turn
-    round.end
-    setup_round
-    // TODO: allow dealer to go more times after player holds
-  }
-
-  def player_draw{
-    player.hand.draw()
-    house.turn
-    turn
-  }
-
-  def defeat = {
-    player.hand.points > 21
-  }
-
-  def early_loss{ 
-    println("You went over!")
-    round.end
-    setup_round
+    end_game
   }
 
   def end_game{
-    println("You have used up all of your gold.  You have lost the game")
-    Thread.sleep(2000)
-    println("\n\nPlease don't take it personally though.  ")
-    Thread.sleep(1200)
-    print("\nTo be honest, you really shouldn't be playing blackjack anyway. ")
-    Thread.sleep(1500)
+    pause(3)
+    println("\nYou have used up all of your gold.  You have completely lost.  You are now bankrupt.  Your family is devestated that you blew all 100 gold coins on Blackjack.")
+    pause(8)
     println("\nIf you're looking for some income, I suggest learning data science or data engineering.")
-    Thread.sleep(2200)
-    println("\n\nThat is all.  I'm getting back to work now.  Good day sir. \n\n\n")
-    }
+    pause(4)
+    println("\n\nThat is all.  I'm getting back to work now.  Good day.")
+    pause(3)
+  }
 
 }
 
+def pause( periods: Int = 1){
+    var time:Int = periods * 500
+    Thread.sleep(time)
+  }
+
 var game = new Game
-game.setup_round
+game.main
