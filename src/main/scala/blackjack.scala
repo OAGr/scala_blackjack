@@ -5,18 +5,13 @@ class Hand{
   val cards = new ArrayBuffer[Card]()
     init
 
+  def init() = {
+    draw()
+    draw()
+  }
+
   def draw() = {
     cards += new Card
-  }
-
-  def points: Int = cards match{
-    case none if none.isEmpty => 0
-    case with_ace if (with_ace.map{c => c.points}.contains(1) && count < 12) => count + 10
-    case cards => count
-  }
-
-  def count:Int = {
-    cards.map{c => c.points}.reduceLeft[Int](_+_)
   }
 
   def show = {
@@ -24,17 +19,26 @@ class Hand{
     println("total points: " + points) 
   }
 
-  def show_from_dealer {
+  def show_opponent_hand {
+    println("(Card Facedown) ")
     for (i <- 1 until cards.length){
       println(cards(i))
     }
   }
 
-  def init() = {
-    draw()
-    draw()
+  def points:Int = cards match{
+    case none if none.isEmpty => 0
+    case use_ace if ( has_ace && count < 12) => count + 10
+    case cards => count
   }
 
+  def count:Int = {
+    cards.map{c => c.points}.reduceLeft[Int](_+_)
+  }
+
+  def has_ace:Boolean = {
+    cards.map{c => c.points}.contains(1)
+  }
 
   class Card{
 
@@ -59,8 +63,8 @@ class Hand{
       }  
 
       def points = value match { 
-        case x if x > 10 => 10
-        case x => x
+        case face_card if face_card > 10 => 10
+        case number_card => number_card
       }
 
       def name = value match {
@@ -85,19 +89,93 @@ class Hand{
   }
 }
 
-class Player{
+abstract class Person(var name:String){
   var hand:Hand = _
   var standing:Boolean = false
-  var gold:Int = 100
 
   def reset = {
     standing = false
     hand = new Hand
   }
 
-  def show_hand{
-    println("\n-- Your Cards -- ")
+  def turn{
+    println("\n========== " + name + "'s Turn ==========")
+    make_choice 
+    pause()
+  }
+
+  def make_choice{
+    choose match {
+      case "stand" => stand
+      case "draw" => draw
+    }
+  }
+
+  def choose: String
+
+  def stand{
+    standing = true
+    println("\n ---<<<<< " + name + " STANDS >>>>>---  \n")
+    pause()
+  }
+
+  def draw{
+    println("\n ---<<<<< " + name + " DRAWS >>>>>---  \n")
+    hand.draw()
+    pause(2)
+    println(name + "'s new hand is")
+    show_hand
+  }
+
+  def show_hand = {
+    println("\n-- " + name + "'s Cards -- ")
+    hand.show_opponent_hand
+  }
+
+  def show_full_hand = {
+    println("\n-- " + name + "'s Cards -- ")
     hand.show
+  }
+}
+
+
+class Player(name:String = "The Dealer") extends Person(name){
+  var gold:Int = 100
+
+  override def make_choice{
+    show_hand
+    choose match {
+      case "stand" => stand
+      case "draw" => {draw; check_if_lost}
+    }
+
+  }
+
+
+  def choose:String = {
+    println("\n\n 1: stand 2: draw ")
+    var choice:String = ""
+
+    while (choice == ""){
+      choice = Console.readInt() match{
+        case 1 => "stand"
+        case 2 => "draw"
+      }
+      if (choice==""){println("didn't understand input.  Try again")}
+    }
+
+    choice
+  }
+
+    def check_if_lost{
+      if (hand.points > 21){
+        standing = true
+        println("You went over!")
+      }
+    }
+
+  override def show_hand{
+    show_full_hand
   }
 
   def select_bid:Int = {
@@ -106,97 +184,28 @@ class Player{
     while (bid == 0){
       var bid_input:Int = Console.readInt()
         bid_input match{
-        case lessthan1 if (lessthan1 < 1) => println("You need to bid a value above 0.  Enter number again.")
-        case overamount if (overamount > gold ) => println("You don't have that much money. Enter number again")
+        case lessthan1 if (lessthan1 < 1) => println("You need to bid a value above 0.  Enter again.")
+        case overamount if (overamount > gold ) => println("You don't have that much money. Enter again")
         case works if (works > 0 && works <= gold) => {bid = bid_input}
-        case _ => println("Didn't understand input.  Try again")
+        case _ => println("Didn't understand input.  Enter again")
       }
     }
     bid
   }
-
-  def turn{
-    show_hand
-
-    println("\n\n 1: stand 2: draw ")
-    var choice = Console.readInt()
-      choice match {
-      case 1 => stand
-      case 2 => draw
-      case _ => { println("didn't understand input.  Try again"); turn }
-    }
-  }
-
-  def stand{
-    standing = true
-    println("\n ---<<<<< You STAND >>>>>---  \n")
-    pause()
-  }
-
-  def draw{
-    hand.draw()
-    println("\n ---<<<<< You DRAW >>>>>---  \n")
-    pause()
-    show_hand
-    if (defeat){
-      early_loss
-    }
-    pause()
-  }
-
-  def defeat = {
-    hand.points > 21
-  }
-
-  def early_loss{ 
-    standing = true
-    println("You went over!")
-  }
 }
 
-class Dealer{
-  var hand:Hand = _
-  var standing:Boolean = false
+class Dealer(name:String = "The Dealer") extends Person(name){
+  val point_limit = 17
 
-  def reset = {
-    standing = false
-    hand = new Hand
-  }
-
-  def show_hand = {
-    println("\n-- Dealer's Cards -- ")
-    println("(Card Facedown) ")
-    hand.show_from_dealer
-  }
-
-  def show_full_hand = {
-    println("\n-- Dealer's Cards -- ")
-    hand.show
-  }
-
-  def turn = {
-    if (hand.points < 17){ 
-      draw
+  def choose:String = {
+    if (hand.points < point_limit){ 
+      "draw"
     }
     else{
-      stand
+      "stand"
     }
   }
 
-  def stand{
-    println("\n ----- The Dealer STANDS ----- \n")
-    pause()
-    standing = true
-  }
-
-  def draw{
-    println("\n ----- The Dealer DRAWS ----- \n")
-    hand.draw()
-    pause(2)
-    println("The Dealers's new hand is")
-    pause()
-    show_hand
-  }
 }
 
 
@@ -223,42 +232,26 @@ class Round( player: Player, dealer: Dealer){
     println("\n ---<<<<< Initial Draw >>>>>---  \n")
     pause()
     dealer.show_hand
+    pause()
     player.show_hand
     pause()
   }
 
   def turn{
     pause()
-    if (!player.standing) { 
-      println("\n========== Your Turn ==========")
-      player.turn 
-      pause()
-    }
-    if (!dealer.standing) { 
-      println("\n========== Dealer's Turn ========== \n")
-      pause()
-      dealer.turn 
-    }
+    if (!player.standing) { player.turn }
+    if (!dealer.standing) { dealer.turn }
   }
 
   def end{
     find_outcome()
     exchange_money()
     print_outcome
+    
   }
 
   def find_outcome() = {
-    result = new Result(player, dealer).multiply
-  }
-
-  def outcome_message():String = result match {
-    case 1 => "Success!  You made " + bid + " gold!"
-    case -1 => "Lost! You lost " + bid + " gold!"
-    case 2 => "Blackjack! You won " + (bid * 2) + "gold!"
-  }
-
-  def exchange_money() = {
-    player.gold += (bid * result)
+    result = new Result(player, dealer).multiplier
   }
 
   def print_outcome{
@@ -272,8 +265,19 @@ class Round( player: Player, dealer: Dealer){
     pause(6)
   }
 
+  def exchange_money() = {
+    player.gold += (bid * result)
+  }
+
+  def outcome_message():String = result match {
+    case 1 => "Success!  You made " + bid + " gold!"
+    case -1 => "Lost! You lost " + bid + " gold!"
+    case 2 => "Blackjack! You won " + (bid * 2) + "gold!"
+  }
+
+
   class Result( player: Player, dealer: Dealer){
-    var multiply: Int = _
+    var multiplier: Int = _
     val dealer_points = dealer.hand.points
     val player_points = player.hand.points
 
@@ -291,22 +295,22 @@ class Round( player: Player, dealer: Dealer){
     }
 
     def win() = {
-      multiply = 1
+      multiplier = 1
     }
 
     def blackjack() = {
-      multiply = 2
+      multiplier = 2
     }
 
     def lose() = {
-      multiply = -1
+      multiplier = -1
     }
   }
 }
 
 class Game{
-  val player = new Player
-  val dealer = new Dealer
+  val player = new Player()
+  val dealer = new Dealer()
   var round: Round = _
 
   def setup{
@@ -336,9 +340,9 @@ class Game{
 }
 
 def pause( periods: Int = 1){
-    var time:Int = periods * 500
-    Thread.sleep(time)
-  }
+  var time:Int = periods * 500
+  Thread.sleep(time)
+}
 
 var game = new Game
 game.main
