@@ -102,7 +102,7 @@ abstract class Person(var name:String){
   }
 
   def turn{
-    println("\n========== " + name + "'s Turn ==========")
+    println(Messages.turn)
     make_choice 
     pause()
   }
@@ -118,12 +118,12 @@ abstract class Person(var name:String){
 
   def stand{
     standing = true
-    println("\n ---<<<<< " + name + " STANDS >>>>>---  \n")
+    println(Messages.stand)
     pause()
   }
 
   def draw{
-    println("\n ---<<<<< " + name + " DRAWS >>>>>---  \n")
+    println(Messages.draw)
     hand.draw()
     pause(2)
     println(name + "'s new hand is")
@@ -131,15 +131,21 @@ abstract class Person(var name:String){
   }
 
   def show_hand = {
-    println("\n-- " + name + "'s Cards -- ")
+    println(Messages.show)
     hand.show_opponent_hand
   }
 
   def show_full_hand = {
-    println("\n-- " + name + "'s Cards -- ")
+    println(Messages.show)
     hand.show
   }
 
+  object Messages{
+    var turn = ("\n========== " + name + "'s Turn ==========")
+    var stand = ("\n ---<<<<< " + name + " STANDS >>>>>---  \n") 
+    var draw = ("\n ---<<<<< " + name + " DRAWS >>>>>---  \n")
+    var show = ("\n-- " + name + "'s Cards -- ")
+  }
 
 }
 
@@ -215,7 +221,7 @@ class Player(name:String = "The Player") extends Person(name){
   }
 
   def complete_round(dealer:Dealer){
-    var multiplier:Int = round_multiplier(dealer:Dealer)
+    var multiplier:Int = bid_multiplier(dealer:Dealer)
     exchange_money(multiplier)
     println(outcome_message(multiplier))
   }
@@ -230,37 +236,19 @@ class Player(name:String = "The Player") extends Person(name){
     case 2 => "Blackjack! You won " + (current_bid * 2) + "gold!"
   }
 
-  def round_multiplier( dealer: Dealer):Int = {
-    var multiplier: Int = 0
-    val dealer_points = dealer.hand.points
-    val person_points = hand.points
+  def bid_multiplier(dealer: Dealer):Int = {
+    val dealer_points:Int = dealer.hand.points
+    val player_points:Int = hand.points
 
-    if (person_points > 21){
-      lose()
-    }
-    else if (person_points == 21){
-      blackjack()
-    }
-    else if (dealer_points > 21 || dealer_points < person_points){
-      win()
-    }
-    else{
-      lose()
-    }
+    val win:Int = 1
+    val blackjack:Int = 2
+    val lose:Int = -1
 
-    def win() = {
-      multiplier = 1
-    }
-
-    def blackjack() = {
-      multiplier = 2
-    }
-
-    def lose() = {
-      multiplier = -1
-    }
-
-    multiplier
+    if (player_points > 21){ lose }
+    else if (player_points == 21){ blackjack }
+    else if (dealer_points > 21){ win } 
+    else if (dealer_points < player_points){ win }
+    else{ lose }
   }
 }
 
@@ -284,12 +272,12 @@ class Round( player: Player, dealer: Dealer){
   }
 
   def introduce{
-    println("\n\n\n<=============== NEW ROUND ===============> \n ")
+    println(Messages.new_round)
     pause()
   }
 
   def opening_draw{
-    println("\n ---<<<<< Initial Draw >>>>>---  \n")
+    println(Messages.initial_draw)
     dealer.show_hand
     pause()
     player.show_hand
@@ -311,13 +299,18 @@ class Round( player: Player, dealer: Dealer){
 
   def print_outcome{
     pause(2)
-    println(" \n\n\n <=============== END OF ROUND ===============> \n ")
+    println(Messages.round_end)
     pause(2)
     dealer.show_full_hand
     player.show_full_hand
     pause(2)
   }
 
+  object Messages{
+    var new_round = "\n\n\n<=============== NEW ROUND ===============>\n "
+    var initial_draw = "\n ---<<<<< Initial Draw >>>>>---  \n"
+    var round_end = " \n\n\n <=============== END OF ROUND ===============> \n "
+  }
 
 }
 
@@ -349,6 +342,8 @@ class Game{
     println("\n\nThat is all.  I'm getting back to work now.  Good day.")
     pause(3)
   }
+
+
 
 }
 
